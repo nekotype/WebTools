@@ -84,9 +84,9 @@ function renderStockTool() {
     if (!copiedRows.length) {
       return;
     }
-    const text = buildExcelExportText(copiedRows);
+    const text = buildPriceOnlyText(copiedRows);
     await copyText(text);
-    status.textContent = "Excel 貼り付け用データをコピーしました。";
+    status.textContent = "株価だけをコピーしました。";
   });
 
   async function handleFetch() {
@@ -273,6 +273,10 @@ function buildExcelExportText(rows) {
     lines.push(`${row.displayDate}\t${row.priceLabel}`);
   });
   return lines.join("\n");
+}
+
+function buildPriceOnlyText(rows) {
+  return rows.map((row) => row.priceLabel).join("\n");
 }
 
 async function copyText(text) {
