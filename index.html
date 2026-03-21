@@ -14,10 +14,20 @@
           <h1>Web Tools</h1>
           <p class="brand-copy">小さな業務ツールをまとめて使えるシンプルな置き場です。</p>
         </div>
+        <label class="mobile-nav" for="tool-select">
+          <span>ツール選択</span>
+          <select id="tool-select" class="tool-select">
+            <option value="stock">株価取得</option>
+            <option value="markdown">Excel→Markdown</option>
+            <option value="network">接続情報</option>
+            <option value="talk">つぶやき</option>
+          </select>
+        </label>
         <nav class="tool-nav" aria-label="ツールメニュー">
           <button class="nav-link is-active" data-route="stock">株価取得</button>
           <button class="nav-link" data-route="markdown">Excel→Markdown</button>
           <button class="nav-link" data-route="network">接続情報</button>
+          <button class="nav-link" data-route="talk">つぶやき</button>
         </nav>
       </aside>
 
@@ -143,6 +153,32 @@
           <span>コピー用テキスト</span>
           <textarea id="network-export" rows="10" readonly placeholder="取得後にここへ結果が入ります"></textarea>
         </label>
+      </div>
+    </template>
+
+    <template id="talk-template">
+      <div class="panel talk-panel">
+        <div class="talk-toolbar">
+          <div id="talk-status" class="status-box">ひとりつぶやきを残せます。</div>
+          <button id="clear-talk-messages" class="secondary-button" type="button">全クリア</button>
+        </div>
+
+        <div id="talk-empty" class="talk-empty">まだメッセージはありません。最初のつぶやきを残してください。</div>
+        <div id="talk-list" class="talk-list" aria-live="polite"></div>
+
+        <div class="talk-compose">
+          <label class="field block-field" for="talk-input">
+            <span>つぶやき</span>
+            <textarea
+              id="talk-input"
+              rows="4"
+              placeholder="今のメモや独り言を残せます。Enterで送信、Shift+Enterで改行。"
+            ></textarea>
+          </label>
+          <div class="talk-compose-actions">
+            <button id="send-talk-message" class="primary-button" type="button">送信</button>
+          </div>
+        </div>
       </div>
     </template>
 

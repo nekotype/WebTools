@@ -102,6 +102,18 @@ async function run() {
       fullPage: true,
     });
 
+    await page.locator('[data-route="talk"]').click();
+    await page.waitForURL(/#talk$/);
+    await page.locator("#talk-input").fill("最初のつぶやき\n2行目");
+    await page.locator("#send-talk-message").click();
+    const talkMessageCount = await page.locator(".talk-message").count();
+    assert(talkMessageCount === 1, "talk tool should save one message");
+    assert(await page.locator(".talk-bubble").textContent(), "talk bubble should show message text");
+    await page.screenshot({
+      path: path.join(ARTIFACT_DIR, "04-talk-ready.png"),
+      fullPage: true,
+    });
+
     await page.locator('[data-route="stock"]').click();
     await page.waitForURL((url) => !url.hash || url.hash === "#stock");
     await page.locator("#stock-code").fill("7203");
@@ -117,7 +129,7 @@ async function run() {
     assert(stockExport.includes("日付\t終値"), "excel export header should be generated");
     assert(stockExport.includes("2010年12月01日"), "excel export should include target dates");
     await page.screenshot({
-      path: path.join(ARTIFACT_DIR, "04-stock-result.png"),
+      path: path.join(ARTIFACT_DIR, "05-stock-result.png"),
       fullPage: true,
     });
 
@@ -128,6 +140,7 @@ async function run() {
         stockDefaultView: true,
         markdownConversion: true,
         networkInfoHandled: true,
+        talkHandled: true,
         stockRequestHandled: true,
       },
       deterministicInputs: {
@@ -142,6 +155,7 @@ async function run() {
         route: await page.evaluate(() => window.location.hash || "#stock"),
         pageTitle: await page.title(),
         networkExport,
+        talkMessageCount,
         stockStatus,
         stockRows: tableRows,
         copyAllDisabled,
@@ -153,7 +167,8 @@ async function run() {
           "01-stock-initial.png",
           "02-markdown-ready.png",
           "03-network-info.png",
-          "04-stock-result.png",
+          "04-talk-ready.png",
+          "05-stock-result.png",
         ],
         video: path.basename(FINAL_VIDEO_PATH),
       },

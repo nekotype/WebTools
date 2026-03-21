@@ -16,6 +16,7 @@ const STOCK_DATES = [
   "2024-12-02",
   "2025-12-01",
 ];
+const TALK_STORAGE_KEY = "webtools-talk-messages";
 
 const routes = {
   stock: {
@@ -39,18 +40,29 @@ const routes = {
     templateId: "network-template",
     render: renderNetworkTool,
   },
+  talk: {
+    title: "つぶやき",
+    description:
+      "自分だけのひとりメモを、LINE風の吹き出しで残せます。内容はこのブラウザの localStorage に保存されます。",
+    templateId: "talk-template",
+    render: renderTalkTool,
+  },
 };
 
 const root = document.querySelector("#tool-root");
 const titleNode = document.querySelector("#page-title");
 const descriptionNode = document.querySelector("#page-description");
 const navButtons = [...document.querySelectorAll(".nav-link")];
+const toolSelect = document.querySelector("#tool-select");
 
 window.addEventListener("hashchange", mountRoute);
 navButtons.forEach((button) => {
   button.addEventListener("click", () => {
     window.location.hash = button.dataset.route;
   });
+});
+toolSelect.addEventListener("change", () => {
+  window.location.hash = toolSelect.value;
 });
 
 mountRoute();
@@ -65,6 +77,7 @@ function mountRoute() {
   navButtons.forEach((button) => {
     button.classList.toggle("is-active", button.dataset.route === routeKey);
   });
+  toolSelect.value = routeKey;
 
   root.innerHTML = "";
   root.append(template.content.cloneNode(true));
@@ -225,6 +238,99 @@ function renderNetworkTool() {
     } finally {
       refreshButton.disabled = false;
     }
+  }
+}
+
+function renderTalkTool() {
+  const talkList = document.querySelector("#talk-list");
+  const talkEmpty = document.querySelector("#talk-empty");
+  const talkInput = document.querySelector("#talk-input");
+  const sendButton = document.querySelector("#send-talk-message");
+  const clearButton = document.querySelector("#clear-talk-messages");
+  const status = document.querySelector("#talk-status");
+  let messages = loadTalkMessages();
+
+  renderMessages();
+
+  sendButton.addEventListener("click", handleSend);
+  clearButton.addEventListener("click", handleClear);
+  talkInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      handleSend();
+    }
+  });
+
+  function handleSend() {
+    const text = talkInput.value.trim();
+    if (!text) {
+      status.textContent = "空のメッセージは送信できません。";
+      talkInput.focus();
+      return;
+    }
+
+    messages.push({
+      id: createMessageId(),
+      text,
+      createdAt: new Date().toISOString(),
+    });
+    saveTalkMessages(messages);
+    talkInput.value = "";
+    renderMessages();
+    scrollTalkToBottom(talkList);
+    status.textContent = "メッセージを保存しました。";
+    talkInput.focus();
+  }
+
+  function handleClear() {
+    if (!messages.length) {
+      status.textContent = "削除するメッセージはありません。";
+      return;
+    }
+
+    if (!window.confirm("保存済みのメッセージをすべて削除しますか？")) {
+      return;
+    }
+
+    messages = [];
+    saveTalkMessages(messages);
+    renderMessages();
+    status.textContent = "メッセージをすべて削除しました。";
+  }
+
+  function handleDelete(id) {
+    messages = messages.filter((message) => message.id !== id);
+    saveTalkMessages(messages);
+    renderMessages();
+    status.textContent = "メッセージを削除しました。";
+  }
+
+  function renderMessages() {
+    talkList.innerHTML = "";
+    talkEmpty.hidden = messages.length > 0;
+    clearButton.disabled = messages.length === 0;
+
+    messages.forEach((message) => {
+      const item = document.createElement("article");
+      const bubble = document.createElement("div");
+      const meta = document.createElement("div");
+      const deleteButton = document.createElement("button");
+
+      item.className = "talk-message";
+      bubble.className = "talk-bubble";
+      meta.className = "talk-meta";
+      bubble.textContent = message.text;
+
+      deleteButton.type = "button";
+      deleteButton.className = "talk-delete";
+      deleteButton.textContent = "削除";
+      deleteButton.addEventListener("click", () => handleDelete(message.id));
+
+      meta.textContent = formatTalkTimestamp(message.createdAt);
+      meta.append(deleteButton);
+      item.append(bubble, meta);
+      talkList.append(item);
+    });
   }
 }
 
@@ -462,6 +568,40 @@ async function tryFetchText(url) {
 
 function normalizeIpText(value) {
   return value ? value.trim() : "";
+}
+
+function loadTalkMessages() {
+  try {
+    const raw = localStorage.getItem(TALK_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function saveTalkMessages(messages) {
+  localStorage.setItem(TALK_STORAGE_KEY, JSON.stringify(messages));
+}
+
+function createMessageId() {
+  if (window.crypto?.randomUUID) {
+    return window.crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function formatTalkTimestamp(value) {
+  return new Intl.DateTimeFormat("ja-JP", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function scrollTalkToBottom(node) {
+  node.scrollTop = node.scrollHeight;
 }
 
 async function copyText(text) {
