@@ -256,7 +256,7 @@ async function fetchStockHistory(code) {
 }
 
 async function collectNetworkRows() {
-  const apiData = await fetchGeoJsData();
+  const apiData = await fetchBestEffortNetworkData();
   return buildFallbackNetworkRows({
     publicIp: apiData.ip || "不明",
     location: formatLocation(apiData),
@@ -264,20 +264,40 @@ async function collectNetworkRows() {
   });
 }
 
-async function fetchGeoJsData() {
-  const response = await fetch("https://get.geojs.io/v1/ip/geo.json", {
-    method: "GET",
-    headers: {
-      Accept: "application/json",
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch network info: ${response.status}`);
+async function fetchBestEffortNetworkData() {
+  const geoResult = await tryFetchJson("https://get.geojs.io/v1/ip/geo.json");
+  if (geoResult && geoResult.ip) {
+    return geoResult;
   }
 
-  const data = await response.json();
-  return data;
+  const ipOnlyResult = await tryFetchJson("https://jsonip.com");
+  if (ipOnlyResult && ipOnlyResult.ip) {
+    return { ip: ipOnlyResult.ip };
+  }
+
+  throw new Error("All network info providers failed");
+}
+
+async function tryFetchJson(url) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 5000);
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return await response.json();
+  } catch (error) {
+    return null;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
 }
 
 function extractCsvText(rawText) {
