@@ -1,0 +1,41 @@
+{
+  "checked": {
+    "stockDefaultView": true,
+    "markdownConversion": true,
+    "stockRequestHandled": true
+  },
+  "deterministicInputs": {
+    "markdownTable": [
+      [
+        "項目",
+        "値"
+      ],
+      [
+        "売上",
+        "100"
+      ],
+      [
+        "利益",
+        "25"
+      ]
+    ],
+    "stockCode": "7203"
+  },
+  "final": {
+    "route": "#stock",
+    "pageTitle": "Web Tools",
+    "stockStatus": "7203 の終値を表示しました。",
+    "stockRows": 16,
+    "copyAllDisabled": false,
+    "stockExport": "日付\t終値\n2010年12月01日\t449.876\n2011年12月01日\t354.764\n2012年12月03日\t494.512\n2013年12月02日\t916.47\n2014年12月01日\t1100.81\n2015年12月01日\t1183.55\n2016年12月01日\t1058.7\n2017年12月01日\t1149.91\n2018年12月03日\t1183.75\n2019年12月02日\t1344.25\n2020年12月01日\t1257.85\n2021年12月01日\t1884.61\n2022年12月01日\t1888.55\n2023年12月01日\t2758.83\n2024年12月02日\t2611\n2025年12月01日\t3082",
+    "markdownOutput": "| 項目 | 値 |\n| --- | --- |\n| 売上 | 100 |\n| 利益 | 25 |"
+  },
+  "artifacts": {
+    "screenshots": [
+      "01-stock-initial.png",
+      "02-markdown-ready.png",
+      "03-stock-result.png"
+    ],
+    "video": "webtools-run.webm"
+  }
+}

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Web Tools</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <p class="brand-kicker">GitHub Pages</p>
+          <h1>Web Tools</h1>
+          <p class="brand-copy">小さな業務ツールをまとめて使えるシンプルな置き場です。</p>
+        </div>
+        <nav class="tool-nav" aria-label="ツールメニュー">
+          <button class="nav-link is-active" data-route="stock">株価取得</button>
+          <button class="nav-link" data-route="markdown">Excel→Markdown</button>
+        </nav>
+      </aside>
+
+      <main class="content">
+        <section class="hero">
+          <p class="eyebrow">Simple Utility Suite</p>
+          <h2 id="page-title">株価取得</h2>
+          <p id="page-description">
+            証券コードを入力して、指定日の終値を一覧表示します。各行またはまとめてワンクリックでコピーできます。
+          </p>
+        </section>
+
+        <section id="tool-root" class="tool-root" aria-live="polite"></section>
+      </main>
+    </div>
+
+    <template id="stock-template">
+      <div class="panel">
+        <div class="form-row">
+          <label class="field">
+            <span>証券コード</span>
+            <input
+              id="stock-code"
+              name="stock-code"
+              type="text"
+              inputmode="numeric"
+              placeholder="例: 9434"
+              maxlength="10"
+              autocomplete="off"
+            />
+          </label>
+          <button id="fetch-stock" class="primary-button" type="button">株価を取得</button>
+        </div>
+
+        <div class="hint-list">
+          <p>入力は東証コードを想定しています。取得対象は指定日の終値です。</p>
+          <p>取得元は `Stooq` の日足データです。ブラウザ制限で取得できない環境ではエラーを表示します。</p>
+        </div>
+
+        <div id="stock-status" class="status-box">証券コードを入力してください。</div>
+
+        <div class="result-actions">
+          <button id="copy-stock-all" class="secondary-button" type="button" disabled>
+            Excel 用にコピー
+          </button>
+        </div>
+
+        <div class="table-wrap">
+          <table class="result-table">
+            <thead>
+              <tr>
+                <th>日付</th>
+                <th>終値</th>
+              </tr>
+            </thead>
+            <tbody id="stock-results"></tbody>
+          </table>
+        </div>
+
+        <label class="field block-field" for="stock-export">
+          <span>Excel 貼り付け用</span>
+          <textarea id="stock-export" rows="8" readonly placeholder="株価取得後にここへ一覧が入ります"></textarea>
+        </label>
+      </div>
+    </template>
+
+    <template id="markdown-template">
+      <div class="panel">
+        <label class="field block-field" for="excel-input">
+          <span>Excel から貼り付け</span>
+          <textarea
+            id="excel-input"
+            rows="12"
+            placeholder="Excel から表をそのまま貼り付けてください"
+          ></textarea>
+        </label>
+
+        <div class="form-row">
+          <button id="convert-markdown" class="primary-button" type="button">Markdown に変換</button>
+          <button id="copy-markdown" class="secondary-button" type="button" disabled>
+            Markdown をコピー
+          </button>
+        </div>
+
+        <div id="markdown-status" class="status-box">表を貼り付けて変換してください。</div>
+
+        <label class="field block-field" for="markdown-output">
+          <span>Markdown 出力</span>
+          <textarea id="markdown-output" rows="12" readonly></textarea>
+        </label>
+      </div>
+    </template>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
