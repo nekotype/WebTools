@@ -32,6 +32,13 @@ const routes = {
     templateId: "markdown-template",
     render: renderMarkdownTool,
   },
+  network: {
+    title: "接続情報",
+    description:
+      "グローバルIP、推定地域、ブラウザや画面情報をまとめて表示します。確認君のように、そのままコピーできます。",
+    templateId: "network-template",
+    render: renderNetworkTool,
+  },
 };
 
 const root = document.querySelector("#tool-root");
@@ -174,6 +181,53 @@ function renderMarkdownTool() {
   });
 }
 
+function renderNetworkTool() {
+  const refreshButton = document.querySelector("#refresh-network-info");
+  const copyButton = document.querySelector("#copy-network-info");
+  const status = document.querySelector("#network-status");
+  const resultBody = document.querySelector("#network-results");
+  const exportBox = document.querySelector("#network-export");
+  let rows = [];
+
+  refreshButton.addEventListener("click", handleRefresh);
+  copyButton.addEventListener("click", async () => {
+    if (!rows.length) {
+      return;
+    }
+    await copyText(exportBox.value);
+    status.textContent = "接続情報をコピーしました。";
+  });
+
+  handleRefresh();
+
+  async function handleRefresh() {
+    refreshButton.disabled = true;
+    copyButton.disabled = true;
+    resultBody.innerHTML = "";
+    exportBox.value = "";
+    status.textContent = "接続情報を取得しています...";
+
+    try {
+      rows = await collectNetworkRows();
+      renderKeyValueRows(resultBody, rows);
+      exportBox.value = buildKeyValueText(rows);
+      copyButton.disabled = false;
+      status.textContent = "接続情報を表示しました。";
+    } catch (error) {
+      rows = buildFallbackNetworkRows({
+        publicIp: "取得失敗",
+        location: "外部APIの取得に失敗しました",
+      });
+      renderKeyValueRows(resultBody, rows);
+      exportBox.value = buildKeyValueText(rows);
+      copyButton.disabled = false;
+      status.textContent = "一部の接続情報だけ表示しました。";
+    } finally {
+      refreshButton.disabled = false;
+    }
+  }
+}
+
 async function fetchStockHistory(code) {
   const sourceUrl = `https://r.jina.ai/http://stooq.com/q/d/l/?s=${code}.jp&i=d`;
   const response = await fetch(sourceUrl, {
@@ -199,6 +253,35 @@ async function fetchStockHistory(code) {
   });
 
   return history;
+}
+
+async function collectNetworkRows() {
+  const apiData = await fetchIpWhoisData();
+  return buildFallbackNetworkRows({
+    publicIp: apiData.ip || "不明",
+    location: formatLocation(apiData),
+    network: formatNetwork(apiData),
+  });
+}
+
+async function fetchIpWhoisData() {
+  const response = await fetch("https://ipwho.is/", {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch network info: ${response.status}`);
+  }
+
+  const data = await response.json();
+  if (!data.success) {
+    throw new Error("IP lookup API returned unsuccessful response");
+  }
+
+  return data;
 }
 
 function extractCsvText(rawText) {
@@ -267,6 +350,18 @@ function formatJapaneseDate(isoDate) {
   return `${year}年${month}月${day}日`;
 }
 
+function formatLocation(data) {
+  const values = [data.country, data.region, data.city].filter(Boolean);
+  return values.length ? values.join(" / ") : "不明";
+}
+
+function formatNetwork(data) {
+  const values = [data.connection?.isp, data.connection?.org, data.connection?.asn]
+    .filter(Boolean)
+    .join(" / ");
+  return values || "不明";
+}
+
 function buildExcelExportText(rows) {
   const lines = ["日付\t終値"];
   rows.forEach((row) => {
@@ -277,6 +372,42 @@ function buildExcelExportText(rows) {
 
 function buildPriceOnlyText(rows) {
   return rows.map((row) => row.priceLabel).join("\n");
+}
+
+function buildFallbackNetworkRows({ publicIp, location, network }) {
+  return [
+    { label: "グローバルIP", value: publicIp || "不明" },
+    { label: "接続元の推定地域", value: location || "不明" },
+    { label: "ネットワーク", value: network || "不明" },
+    { label: "参照元", value: document.referrer || "なし" },
+    { label: "User Agent", value: navigator.userAgent || "不明" },
+    { label: "言語", value: navigator.language || "不明" },
+    { label: "タイムゾーン", value: Intl.DateTimeFormat().resolvedOptions().timeZone || "不明" },
+    { label: "画面サイズ", value: `${window.screen.width} x ${window.screen.height}` },
+    { label: "表示領域", value: `${window.innerWidth} x ${window.innerHeight}` },
+    { label: "現在URL", value: window.location.href },
+  ];
+}
+
+function renderKeyValueRows(resultBody, rows) {
+  resultBody.innerHTML = "";
+
+  rows.forEach((row) => {
+    const tr = document.createElement("tr");
+    const labelCell = document.createElement("td");
+    const valueCell = document.createElement("td");
+
+    labelCell.textContent = row.label;
+    valueCell.textContent = row.value;
+    valueCell.className = "value-pre";
+
+    tr.append(labelCell, valueCell);
+    resultBody.append(tr);
+  });
+}
+
+function buildKeyValueText(rows) {
+  return rows.map((row) => `${row.label}\t${row.value}`).join("\n");
 }
 
 async function copyText(text) {

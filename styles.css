@@ -242,6 +242,11 @@ textarea {
   font-variant-numeric: tabular-nums;
 }
 
+.value-pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 @media (max-width: 900px) {
   .app-shell {
     grid-template-columns: 1fr;

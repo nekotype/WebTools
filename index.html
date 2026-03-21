@@ -17,6 +17,7 @@
         <nav class="tool-nav" aria-label="ツールメニュー">
           <button class="nav-link is-active" data-route="stock">株価取得</button>
           <button class="nav-link" data-route="markdown">Excel→Markdown</button>
+          <button class="nav-link" data-route="network">接続情報</button>
         </nav>
       </aside>
 
@@ -106,6 +107,41 @@
         <label class="field block-field" for="markdown-output">
           <span>Markdown 出力</span>
           <textarea id="markdown-output" rows="12" readonly></textarea>
+        </label>
+      </div>
+    </template>
+
+    <template id="network-template">
+      <div class="panel">
+        <div class="form-row">
+          <button id="refresh-network-info" class="primary-button" type="button">情報を更新</button>
+          <button id="copy-network-info" class="secondary-button" type="button" disabled>
+            結果をコピー
+          </button>
+        </div>
+
+        <div class="hint-list">
+          <p>グローバルIPと地域情報は外部APIから取得します。</p>
+          <p>地域は推定値なので、VPN やプロキシ利用時は実際の場所と異なることがあります。</p>
+        </div>
+
+        <div id="network-status" class="status-box">情報を取得してください。</div>
+
+        <div class="table-wrap">
+          <table class="result-table">
+            <thead>
+              <tr>
+                <th>項目</th>
+                <th>値</th>
+              </tr>
+            </thead>
+            <tbody id="network-results"></tbody>
+          </table>
+        </div>
+
+        <label class="field block-field" for="network-export">
+          <span>コピー用テキスト</span>
+          <textarea id="network-export" rows="10" readonly placeholder="取得後にここへ結果が入ります"></textarea>
         </label>
       </div>
     </template>
