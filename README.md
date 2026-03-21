@@ -25,6 +25,8 @@ GitHub Pages で動かせる、シンプルな業務用ツール集です。
 - `index.html`
 - `styles.css`
 - `app.js`
+- `src/`
+  - ルーティング、メニュー制御、各ツール処理を分割
 
 このままリポジトリのルートに置いて GitHub Pages を有効化すれば公開できます。
 
