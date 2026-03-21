@@ -258,21 +258,34 @@ async function fetchStockHistory(code) {
 async function collectNetworkRows() {
   const apiData = await fetchBestEffortNetworkData();
   return buildFallbackNetworkRows({
-    publicIp: apiData.ip || "不明",
+    publicIp: apiData.ipv4 || apiData.ip || "不明",
+    publicIpv6: apiData.ipv6 || "不明",
     location: formatLocation(apiData),
     network: formatNetwork(apiData),
   });
 }
 
 async function fetchBestEffortNetworkData() {
-  const geoResult = await tryFetchJson("https://get.geojs.io/v1/ip/geo.json");
+  const [ipv4Result, geoResult] = await Promise.all([
+    tryFetchText("https://ipv4.icanhazip.com"),
+    tryFetchJson("https://get.geojs.io/v1/ip/geo.json"),
+  ]);
+
   if (geoResult && geoResult.ip) {
-    return geoResult;
+    return {
+      ...geoResult,
+      ipv4: normalizeIpText(ipv4Result),
+      ipv6: geoResult.ip && geoResult.ip.includes(":") ? geoResult.ip : "",
+    };
   }
 
   const ipOnlyResult = await tryFetchJson("https://jsonip.com");
   if (ipOnlyResult && ipOnlyResult.ip) {
-    return { ip: ipOnlyResult.ip };
+    return {
+      ip: ipOnlyResult.ip,
+      ipv4: normalizeIpText(ipv4Result) || ipOnlyResult.ip,
+      ipv6: "",
+    };
   }
 
   throw new Error("All network info providers failed");
@@ -388,9 +401,10 @@ function buildPriceOnlyText(rows) {
   return rows.map((row) => row.priceLabel).join("\n");
 }
 
-function buildFallbackNetworkRows({ publicIp, location, network }) {
+function buildFallbackNetworkRows({ publicIp, publicIpv6, location, network }) {
   return [
-    { label: "グローバルIP", value: publicIp || "不明" },
+    { label: "グローバルIP(IPv4)", value: publicIp || "不明" },
+    { label: "グローバルIP(IPv6)", value: publicIpv6 || "不明" },
     { label: "接続元の推定地域", value: location || "不明" },
     { label: "ネットワーク", value: network || "不明" },
     { label: "参照元", value: document.referrer || "なし" },
@@ -422,6 +436,32 @@ function renderKeyValueRows(resultBody, rows) {
 
 function buildKeyValueText(rows) {
   return rows.map((row) => `${row.label}\t${row.value}`).join("\n");
+}
+
+async function tryFetchText(url) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 5000);
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      return "";
+    }
+
+    return await response.text();
+  } catch (error) {
+    return "";
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
+function normalizeIpText(value) {
+  return value ? value.trim() : "";
 }
 
 async function copyText(text) {
