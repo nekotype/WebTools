@@ -171,6 +171,17 @@ export function convertExcelTextToMarkdown(text) {
   return tableRows.map((row) => `| ${row.join(" | ")} |`).join("\n");
 }
 
+export function encodeBase64Text(value) {
+  const bytes = new TextEncoder().encode(value);
+  return bytesToBase64(bytes);
+}
+
+export function decodeBase64Text(value) {
+  const normalized = value.replace(/\s+/g, "");
+  const bytes = base64ToBytes(normalized);
+  return new TextDecoder().decode(bytes);
+}
+
 export function loadTalkMessages() {
   try {
     const raw = localStorage.getItem(TALK_STORAGE_KEY);
@@ -281,4 +292,23 @@ function parseDailyCsv(csvText) {
 
 function escapeMarkdownCell(value) {
   return value.replace(/\|/g, "\\|");
+}
+
+function bytesToBase64(bytes) {
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary);
+}
+
+function base64ToBytes(value) {
+  const binary = atob(value);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  return bytes;
 }

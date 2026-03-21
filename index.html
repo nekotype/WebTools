@@ -21,6 +21,7 @@
             <option value="markdown">Excel→Markdown</option>
             <option value="network">接続情報</option>
             <option value="talk">つぶやき</option>
+            <option value="base64">Base64変換</option>
           </select>
         </label>
         <nav class="tool-nav" aria-label="ツールメニュー">
@@ -28,6 +29,7 @@
           <button class="nav-link" data-route="markdown">Excel→Markdown</button>
           <button class="nav-link" data-route="network">接続情報</button>
           <button class="nav-link" data-route="talk">つぶやき</button>
+          <button class="nav-link" data-route="base64">Base64変換</button>
         </nav>
       </aside>
 
@@ -179,6 +181,39 @@
             <button id="send-talk-message" class="primary-button" type="button">送信</button>
           </div>
         </div>
+      </div>
+    </template>
+
+    <template id="base64-template">
+      <div class="panel">
+        <div class="hint-list">
+          <p>UTF-8の文字列を Base64 へ変換、または Base64 から元の文字列へ復元します。</p>
+          <p>日本語や改行を含むテキストにも対応します。</p>
+        </div>
+
+        <div class="form-row">
+          <button id="encode-base64" class="primary-button" type="button">エンコード</button>
+          <button id="decode-base64" class="secondary-button" type="button">デコード</button>
+          <button id="copy-base64-output" class="secondary-button" type="button" disabled>
+            結果をコピー
+          </button>
+        </div>
+
+        <div id="base64-status" class="status-box">文字列または Base64 を入力してください。</div>
+
+        <label class="field block-field" for="base64-input">
+          <span>入力</span>
+          <textarea
+            id="base64-input"
+            rows="8"
+            placeholder="ここに変換したい文字列、または Base64 を入力してください"
+          ></textarea>
+        </label>
+
+        <label class="field block-field" for="base64-output">
+          <span>出力</span>
+          <textarea id="base64-output" rows="8" readonly placeholder="変換結果がここに表示されます"></textarea>
+        </label>
       </div>
     </template>
 

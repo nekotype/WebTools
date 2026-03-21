@@ -114,6 +114,21 @@ async function run() {
       fullPage: true,
     });
 
+    await page.locator('[data-route="base64"]').click();
+    await page.waitForURL(/#base64$/);
+    await page.locator("#base64-input").fill("こんにちは");
+    await page.locator("#encode-base64").click();
+    const base64Encoded = await page.locator("#base64-output").inputValue();
+    assert(base64Encoded.length > 0, "base64 output should be generated");
+    await page.locator("#base64-input").fill(base64Encoded);
+    await page.locator("#decode-base64").click();
+    const base64Decoded = await page.locator("#base64-output").inputValue();
+    assert(base64Decoded === "こんにちは", "base64 decoded output should match the original text");
+    await page.screenshot({
+      path: path.join(ARTIFACT_DIR, "05-base64-ready.png"),
+      fullPage: true,
+    });
+
     await page.locator('[data-route="stock"]').click();
     await page.waitForURL((url) => !url.hash || url.hash === "#stock");
     await page.locator("#stock-code").fill("7203");
@@ -129,7 +144,7 @@ async function run() {
     assert(stockExport.includes("日付\t終値"), "excel export header should be generated");
     assert(stockExport.includes("2010年12月01日"), "excel export should include target dates");
     await page.screenshot({
-      path: path.join(ARTIFACT_DIR, "05-stock-result.png"),
+      path: path.join(ARTIFACT_DIR, "06-stock-result.png"),
       fullPage: true,
     });
 
@@ -141,6 +156,7 @@ async function run() {
         markdownConversion: true,
         networkInfoHandled: true,
         talkHandled: true,
+        base64Handled: true,
         stockRequestHandled: true,
       },
       deterministicInputs: {
@@ -156,6 +172,7 @@ async function run() {
         pageTitle: await page.title(),
         networkExport,
         talkMessageCount,
+        base64Decoded,
         stockStatus,
         stockRows: tableRows,
         copyAllDisabled,
@@ -168,7 +185,8 @@ async function run() {
           "02-markdown-ready.png",
           "03-network-info.png",
           "04-talk-ready.png",
-          "05-stock-result.png",
+          "05-base64-ready.png",
+          "06-stock-result.png",
         ],
         video: path.basename(FINAL_VIDEO_PATH),
       },

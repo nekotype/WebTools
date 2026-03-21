@@ -1,3 +1,4 @@
+import { renderBase64Tool } from "./tools/base64.js";
 import { renderMarkdownTool } from "./tools/markdown.js";
 import { renderNetworkTool } from "./tools/network.js";
 import { renderStockTool } from "./tools/stock.js";
@@ -31,6 +32,13 @@ export const routes = {
       "自分だけのひとりメモを、LINE風の吹き出しで残せます。内容はこのブラウザの localStorage に保存されます。",
     templateId: "talk-template",
     render: renderTalkTool,
+  },
+  base64: {
+    title: "Base64変換",
+    description:
+      "文字列の Base64 エンコードとデコードをすばやく行えます。UTF-8テキストにも対応します。",
+    templateId: "base64-template",
+    render: renderBase64Tool,
   },
 };
 
