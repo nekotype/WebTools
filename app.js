@@ -256,7 +256,7 @@ async function fetchStockHistory(code) {
 }
 
 async function collectNetworkRows() {
-  const apiData = await fetchIpWhoisData();
+  const apiData = await fetchGeoJsData();
   return buildFallbackNetworkRows({
     publicIp: apiData.ip || "不明",
     location: formatLocation(apiData),
@@ -264,8 +264,8 @@ async function collectNetworkRows() {
   });
 }
 
-async function fetchIpWhoisData() {
-  const response = await fetch("https://ipwho.is/", {
+async function fetchGeoJsData() {
+  const response = await fetch("https://get.geojs.io/v1/ip/geo.json", {
     method: "GET",
     headers: {
       Accept: "application/json",
@@ -277,10 +277,6 @@ async function fetchIpWhoisData() {
   }
 
   const data = await response.json();
-  if (!data.success) {
-    throw new Error("IP lookup API returned unsuccessful response");
-  }
-
   return data;
 }
 
@@ -356,9 +352,7 @@ function formatLocation(data) {
 }
 
 function formatNetwork(data) {
-  const values = [data.connection?.isp, data.connection?.org, data.connection?.asn]
-    .filter(Boolean)
-    .join(" / ");
+  const values = [data.organization_name, data.organization, data.asn].filter(Boolean).join(" / ");
   return values || "不明";
 }
 
