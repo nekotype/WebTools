@@ -22,6 +22,7 @@
             <option value="network">接続情報</option>
             <option value="talk">つぶやき</option>
             <option value="base64">Base64変換</option>
+            <option value="clipboard">コピペ帳</option>
           </select>
         </label>
         <nav class="tool-nav" aria-label="ツールメニュー">
@@ -30,6 +31,7 @@
           <button class="nav-link" data-route="network">接続情報</button>
           <button class="nav-link" data-route="talk">つぶやき</button>
           <button class="nav-link" data-route="base64">Base64変換</button>
+          <button class="nav-link" data-route="clipboard">コピペ帳</button>
         </nav>
       </aside>
 
@@ -214,6 +216,36 @@
           <span>出力</span>
           <textarea id="base64-output" rows="8" readonly placeholder="変換結果がここに表示されます"></textarea>
         </label>
+      </div>
+    </template>
+
+    <template id="clipboard-template">
+      <div class="panel clipboard-panel">
+        <div class="talk-toolbar">
+          <div id="clipboard-status" class="status-box">
+            よく使う文字列を保存して、一覧からワンクリックでコピーできます。
+          </div>
+          <button id="clear-clipboard-items" class="secondary-button" type="button">全クリア</button>
+        </div>
+
+        <div class="talk-compose">
+          <label class="field block-field" for="clipboard-input">
+            <span>保存する文字列</span>
+            <textarea
+              id="clipboard-input"
+              rows="4"
+              placeholder="住所、定型文、メール文面などを保存できます"
+            ></textarea>
+          </label>
+          <div class="talk-compose-actions">
+            <button id="save-clipboard-item" class="primary-button" type="button">保存</button>
+          </div>
+        </div>
+
+        <div id="clipboard-empty" class="talk-empty">
+          まだ保存された文字列はありません。上から追加してください。
+        </div>
+        <div id="clipboard-list" class="clipboard-list" aria-live="polite"></div>
       </div>
     </template>
 

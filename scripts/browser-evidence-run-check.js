@@ -129,6 +129,22 @@ async function run() {
       fullPage: true,
     });
 
+    await page.locator('[data-route="clipboard"]').click();
+    await page.waitForURL(/#clipboard$/);
+    await page.locator("#clipboard-input").fill("定型文A");
+    await page.locator("#save-clipboard-item").click();
+    await page.locator("#clipboard-input").fill("定型文B");
+    await page.locator("#save-clipboard-item").click();
+    const clipboardCount = await page.locator(".clipboard-card").count();
+    assert(clipboardCount === 2, "clipboard tool should save two items");
+    await page.locator(".clipboard-card").nth(1).dragTo(page.locator(".clipboard-card").nth(0));
+    const firstClipboardText = await page.locator(".clipboard-text").first().textContent();
+    assert(firstClipboardText === "定型文B", "clipboard items should be reorderable");
+    await page.screenshot({
+      path: path.join(ARTIFACT_DIR, "06-clipboard-ready.png"),
+      fullPage: true,
+    });
+
     await page.locator('[data-route="stock"]').click();
     await page.waitForURL((url) => !url.hash || url.hash === "#stock");
     await page.locator("#stock-code").fill("7203");
@@ -144,7 +160,7 @@ async function run() {
     assert(stockExport.includes("日付\t終値"), "excel export header should be generated");
     assert(stockExport.includes("2010年12月01日"), "excel export should include target dates");
     await page.screenshot({
-      path: path.join(ARTIFACT_DIR, "06-stock-result.png"),
+      path: path.join(ARTIFACT_DIR, "07-stock-result.png"),
       fullPage: true,
     });
 
@@ -157,6 +173,7 @@ async function run() {
         networkInfoHandled: true,
         talkHandled: true,
         base64Handled: true,
+        clipboardHandled: true,
         stockRequestHandled: true,
       },
       deterministicInputs: {
@@ -173,6 +190,8 @@ async function run() {
         networkExport,
         talkMessageCount,
         base64Decoded,
+        clipboardCount,
+        firstClipboardText,
         stockStatus,
         stockRows: tableRows,
         copyAllDisabled,
@@ -186,7 +205,8 @@ async function run() {
           "03-network-info.png",
           "04-talk-ready.png",
           "05-base64-ready.png",
-          "06-stock-result.png",
+          "06-clipboard-ready.png",
+          "07-stock-result.png",
         ],
         video: path.basename(FINAL_VIDEO_PATH),
       },

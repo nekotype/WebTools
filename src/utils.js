@@ -1,4 +1,5 @@
 const TALK_STORAGE_KEY = "webtools-talk-messages";
+const CLIPBOARD_STORAGE_KEY = "webtools-clipboard-items";
 
 export const STOCK_DATES = [
   "2010-12-01",
@@ -196,6 +197,20 @@ export function saveTalkMessages(messages) {
   localStorage.setItem(TALK_STORAGE_KEY, JSON.stringify(messages));
 }
 
+export function loadClipboardItems() {
+  try {
+    const raw = localStorage.getItem(CLIPBOARD_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+export function saveClipboardItems(items) {
+  localStorage.setItem(CLIPBOARD_STORAGE_KEY, JSON.stringify(items));
+}
+
 export function createMessageId() {
   if (window.crypto?.randomUUID) {
     return window.crypto.randomUUID();
@@ -214,6 +229,20 @@ export function formatTalkTimestamp(value) {
 
 export function scrollTalkToBottom(node) {
   node.scrollTop = node.scrollHeight;
+}
+
+export function reorderItems(items, sourceId, targetId) {
+  const next = [...items];
+  const sourceIndex = next.findIndex((item) => item.id === sourceId);
+  const targetIndex = next.findIndex((item) => item.id === targetId);
+
+  if (sourceIndex === -1 || targetIndex === -1) {
+    return next;
+  }
+
+  const [moved] = next.splice(sourceIndex, 1);
+  next.splice(targetIndex, 0, moved);
+  return next;
 }
 
 async function tryFetchJson(url) {

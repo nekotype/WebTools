@@ -1,4 +1,5 @@
 import { renderBase64Tool } from "./tools/base64.js";
+import { renderClipboardTool } from "./tools/clipboard.js";
 import { renderMarkdownTool } from "./tools/markdown.js";
 import { renderNetworkTool } from "./tools/network.js";
 import { renderStockTool } from "./tools/stock.js";
@@ -39,6 +40,13 @@ export const routes = {
       "文字列の Base64 エンコードとデコードをすばやく行えます。UTF-8テキストにも対応します。",
     templateId: "base64-template",
     render: renderBase64Tool,
+  },
+  clipboard: {
+    title: "コピペ帳",
+    description:
+      "よく使う文字列を localStorage に保存し、一覧からワンクリックでコピーできます。並び替えと削除にも対応します。",
+    templateId: "clipboard-template",
+    render: renderClipboardTool,
   },
 };
 

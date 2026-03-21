@@ -353,6 +353,70 @@ textarea {
   justify-content: end;
 }
 
+.clipboard-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.clipboard-list {
+  display: grid;
+  gap: 10px;
+}
+
+.clipboard-card {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: start;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(31, 42, 46, 0.08);
+  box-shadow: 0 10px 24px rgba(31, 42, 46, 0.08);
+}
+
+.clipboard-card.is-dragging {
+  opacity: 0.65;
+}
+
+.clipboard-card.is-drop-target {
+  outline: 2px solid rgba(15, 118, 110, 0.35);
+}
+
+.clipboard-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  color: var(--muted);
+  cursor: grab;
+  letter-spacing: 0.08em;
+}
+
+.clipboard-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.65;
+}
+
+.clipboard-meta {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: end;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.clipboard-delete {
+  border: none;
+  background: transparent;
+  color: #b45309;
+  cursor: pointer;
+  padding: 0;
+}
+
 @media (max-width: 900px) {
   .app-shell {
     grid-template-columns: 1fr;
@@ -383,5 +447,14 @@ textarea {
   .talk-list {
     max-height: 360px;
     padding-left: 8px;
+  }
+
+  .clipboard-card {
+    grid-template-columns: 24px 1fr;
+  }
+
+  .clipboard-meta {
+    grid-column: 1 / -1;
+    justify-content: space-between;
   }
 }
