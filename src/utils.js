@@ -25,8 +25,9 @@ export async function copyText(text) {
 }
 
 export function normalizeCode(value) {
-  const digits = value.replace(/[^\d]/g, "");
-  return digits.length >= 4 ? digits.slice(0, 5) : "";
+  const normalized = value.trim().toUpperCase().replace(/[^0-9A-Z]/g, "");
+  const match = normalized.match(/^\d{4}[A-Z]?/);
+  return match ? match[0] : "";
 }
 
 export function formatJapaneseDate(isoDate) {
@@ -120,7 +121,7 @@ export async function fetchBestEffortNetworkData() {
 }
 
 export async function fetchStockHistory(code) {
-  const sourceUrl = `https://r.jina.ai/http://stooq.com/q/d/l/?s=${code}.jp&i=d`;
+  const sourceUrl = `https://r.jina.ai/http://stooq.com/q/d/l/?s=${code.toLowerCase()}.jp&i=d`;
   const response = await fetch(sourceUrl, {
     method: "GET",
     headers: {

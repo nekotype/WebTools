@@ -57,8 +57,8 @@
               id="stock-code"
               name="stock-code"
               type="text"
-              inputmode="numeric"
-              placeholder="例: 9434"
+              inputmode="text"
+              placeholder="例: 9434 / 285A"
               maxlength="10"
               autocomplete="off"
             />
@@ -67,7 +67,7 @@
         </div>
 
         <div class="hint-list">
-          <p>入力は東証コードを想定しています。取得対象は指定日の終値です。</p>
+          <p>入力は東証コードを想定しています。4桁コードと、`285A` のような英字付きコードに対応します。</p>
           <p>取得元は `Stooq` の日足データです。ブラウザ制限で取得できない環境ではエラーを表示します。</p>
         </div>
 
