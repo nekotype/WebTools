@@ -35,7 +35,7 @@ export function renderStockTool() {
   async function handleFetch() {
     const code = normalizeCode(input.value);
     if (!code) {
-      status.textContent = "4桁、または末尾に英字1文字を含む証券コードを入力してください。";
+      status.textContent = "4桁、または 285A のような3桁+英字1文字の証券コードを入力してください。";
       input.focus();
       return;
     }

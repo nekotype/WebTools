@@ -26,7 +26,7 @@ export async function copyText(text) {
 
 export function normalizeCode(value) {
   const normalized = value.trim().toUpperCase().replace(/[^0-9A-Z]/g, "");
-  const match = normalized.match(/^\d{4}[A-Z]?/);
+  const match = normalized.match(/^(?:\d{4}|\d{3}[A-Z]|\d{4}[A-Z])/);
   return match ? match[0] : "";
 }
 
