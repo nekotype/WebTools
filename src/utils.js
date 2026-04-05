@@ -131,23 +131,21 @@ export async function fetchStockHistory(code) {
   }
 
   const history = new Map();
-  const monthRanges = buildStockMonthRanges(STOCK_DATES);
   const staleHistory = loadStockHistoryCache(normalizedCode, { allowExpired: true });
 
   try {
-    const responses = await mapWithConcurrency(monthRanges, 1, async ({ start, end }, index) => {
-      if (index > 0) {
-        await wait(150);
-      }
-      return fetchStockMonthHistory(normalizedCode, start, end);
-    });
+    const responses = await mapWithConcurrency(STOCK_DATES, 2, (date) => fetchStockDayHistory(normalizedCode, date));
 
-    responses.forEach((rawText) => {
+    responses.forEach((rawText, index) => {
       parseStooqHistoricalRows(rawText).forEach((record) => {
         if (record.date && record.close && record.close !== "0") {
           history.set(record.date, record.close);
         }
       });
+
+      if (!history.has(STOCK_DATES[index])) {
+        history.set(STOCK_DATES[index], "");
+      }
     });
   } catch (error) {
     if (staleHistory) {
@@ -331,15 +329,15 @@ function base64ToBytes(value) {
   return bytes;
 }
 
-async function fetchStockMonthHistory(code, startDate, endDate) {
+async function fetchStockDayHistory(code, targetDate) {
   const symbol = `${code.toLowerCase()}.jp`;
   const sourceUrl =
-    `https://r.jina.ai/http://stooq.com/q/d/?s=${symbol}&i=d&f=${toCompactDate(startDate)}&t=${toCompactDate(endDate)}`;
+    `https://r.jina.ai/http://stooq.com/q/d/?s=${symbol}&i=d&f=${toCompactDate(targetDate)}&t=${toCompactDate(targetDate)}`;
   let lastError = null;
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 12000);
+    const timeoutId = window.setTimeout(() => controller.abort(), 8000);
 
     try {
       const response = await fetch(sourceUrl, {
@@ -351,7 +349,10 @@ async function fetchStockMonthHistory(code, startDate, endDate) {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch: ${response.status}`);
+        const retryDelayMs = await readRetryDelay(response);
+        const error = new Error(`Failed to fetch: ${response.status}`);
+        error.retryDelayMs = retryDelayMs;
+        throw error;
       }
 
       const rawText = await response.text();
@@ -363,7 +364,7 @@ async function fetchStockMonthHistory(code, startDate, endDate) {
     } catch (error) {
       lastError = error;
       if (attempt < 2) {
-        await wait(500 * (attempt + 1));
+        await wait(error.retryDelayMs || 300 * (attempt + 1));
       }
     } finally {
       window.clearTimeout(timeoutId);
@@ -371,27 +372,6 @@ async function fetchStockMonthHistory(code, startDate, endDate) {
   }
 
   throw lastError || new Error("Failed to fetch stock history");
-}
-
-function buildStockMonthRanges(dates) {
-  const seen = new Set();
-
-  return dates.reduce((ranges, isoDate) => {
-    const [yearText, monthText] = isoDate.split("-");
-    const key = `${yearText}-${monthText}`;
-    if (seen.has(key)) {
-      return ranges;
-    }
-
-    seen.add(key);
-    const year = Number(yearText);
-    const month = Number(monthText);
-    ranges.push({
-      start: `${yearText}-${monthText}-01`,
-      end: `${yearText}-${monthText}-${String(getLastDayOfMonth(year, month)).padStart(2, "0")}`,
-    });
-    return ranges;
-  }, []);
 }
 
 function parseStooqHistoricalRows(rawText) {
@@ -522,10 +502,6 @@ function toCompactDate(isoDate) {
   return isoDate.replaceAll("-", "");
 }
 
-function getLastDayOfMonth(year, month) {
-  return new Date(year, month, 0).getDate();
-}
-
 async function mapWithConcurrency(items, concurrency, mapper) {
   const results = new Array(items.length);
   let nextIndex = 0;
@@ -582,4 +558,41 @@ function wait(ms) {
   return new Promise((resolve) => {
     window.setTimeout(resolve, ms);
   });
+}
+
+async function readRetryDelay(response) {
+  const retryAfterHeader = response.headers.get("retry-after");
+  const headerDelayMs = parseRetryAfterToMs(retryAfterHeader);
+  if (headerDelayMs) {
+    return headerDelayMs;
+  }
+
+  try {
+    const payload = await response.clone().json();
+    if (payload?.retryAfter) {
+      return Number(payload.retryAfter) * 1000;
+    }
+  } catch (error) {
+    // Ignore non-JSON error bodies.
+  }
+
+  return 0;
+}
+
+function parseRetryAfterToMs(value) {
+  if (!value) {
+    return 0;
+  }
+
+  const seconds = Number(value);
+  if (Number.isFinite(seconds)) {
+    return seconds * 1000;
+  }
+
+  const retryAt = Date.parse(value);
+  if (Number.isNaN(retryAt)) {
+    return 0;
+  }
+
+  return Math.max(retryAt - Date.now(), 0);
 }
