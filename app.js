@@ -1,7 +1,7 @@
 import { initMenu, syncMenuState } from "./src/menu.js";
 import { getRoute, routes } from "./src/routes.js";
 
-const APP_VERSION = "1.3";
+const APP_VERSION = "1.3.1";
 
 const root = document.querySelector("#tool-root");
 const titleNode = document.querySelector("#page-title");
