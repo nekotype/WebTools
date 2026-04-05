@@ -40,7 +40,7 @@ textarea {
 .sidebar {
   display: flex;
   flex-direction: column;
-  padding: 32px 24px;
+  padding: 24px 24px 18px;
   border-right: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.45);
   backdrop-filter: blur(18px);
@@ -69,16 +69,21 @@ textarea {
   line-height: 1.7;
 }
 
+.brand-copy {
+  margin: 12px 0 0;
+}
+
 .tool-nav {
   display: grid;
-  gap: 10px;
-  margin-top: 28px;
+  gap: 6px;
+  margin-top: 20px;
+  align-content: start;
   flex: 1 1 auto;
 }
 
 .sidebar-footer {
   margin-top: auto;
-  padding-top: 24px;
+  padding-top: 18px;
   border-top: 1px solid var(--line);
   color: var(--muted);
 }
@@ -136,10 +141,12 @@ textarea {
 }
 
 .nav-link {
-  padding: 14px 16px;
+  min-height: 0;
+  padding: 10px 14px;
   text-align: left;
   background: transparent;
   color: var(--text);
+  line-height: 1.35;
 }
 
 .nav-link:hover,
