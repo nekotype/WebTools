@@ -121,27 +121,18 @@ export async function fetchBestEffortNetworkData() {
 }
 
 export async function fetchStockHistory(code) {
-  const sourceUrl = `https://r.jina.ai/http://stooq.com/q/d/l/?s=${code.toLowerCase()}.jp&i=d`;
-  const response = await fetch(sourceUrl, {
-    method: "GET",
-    headers: {
-      Accept: "text/plain",
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch: ${response.status}`);
-  }
-
-  const rawText = await response.text();
-  const csvText = extractCsvText(rawText);
-  const records = parseDailyCsv(csvText);
   const history = new Map();
+  const monthRanges = buildStockMonthRanges(STOCK_DATES);
+  const responses = await mapWithConcurrency(monthRanges, 4, ({ start, end }) =>
+    fetchStockMonthHistory(code, start, end),
+  );
 
-  records.forEach((record) => {
-    if (record.Date && record.Close && record.Close !== "0") {
-      history.set(record.Date, record.Close);
-    }
+  responses.forEach((rawText) => {
+    parseStooqHistoricalRows(rawText).forEach((record) => {
+      if (record.date && record.close && record.close !== "0") {
+        history.set(record.date, record.close);
+      }
+    });
   });
 
   return history;
@@ -294,32 +285,6 @@ function normalizeIpText(value) {
   return value ? value.trim() : "";
 }
 
-function extractCsvText(rawText) {
-  const marker = "Markdown Content:";
-  const markerIndex = rawText.indexOf(marker);
-  const cleaned = markerIndex >= 0 ? rawText.slice(markerIndex + marker.length).trim() : rawText.trim();
-  const csvStart = cleaned.indexOf("Date,Open,High,Low,Close,Volume");
-
-  if (csvStart === -1) {
-    throw new Error("CSV payload not found");
-  }
-
-  return cleaned.slice(csvStart).trim();
-}
-
-function parseDailyCsv(csvText) {
-  const [headerLine, ...dataLines] = csvText.split(/\r?\n/).filter(Boolean);
-  const headers = headerLine.split(",");
-
-  return dataLines.map((line) => {
-    const values = line.split(",");
-    return headers.reduce((record, header, index) => {
-      record[header] = values[index] ?? "";
-      return record;
-    }, {});
-  });
-}
-
 function escapeMarkdownCell(value) {
   return value.replace(/\|/g, "\\|");
 }
@@ -341,4 +306,185 @@ function base64ToBytes(value) {
   }
 
   return bytes;
+}
+
+async function fetchStockMonthHistory(code, startDate, endDate) {
+  const symbol = `${code.toLowerCase()}.jp`;
+  const sourceUrl =
+    `https://r.jina.ai/http://stooq.com/q/d/?s=${symbol}&i=d&f=${toCompactDate(startDate)}&t=${toCompactDate(endDate)}`;
+  const response = await fetch(sourceUrl, {
+    method: "GET",
+    headers: {
+      Accept: "text/plain",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch: ${response.status}`);
+  }
+
+  const rawText = await response.text();
+  if (rawText.includes("Write to www@stooq.com")) {
+    throw new Error("Stooq historical page is not available");
+  }
+
+  return rawText;
+}
+
+function buildStockMonthRanges(dates) {
+  const seen = new Set();
+
+  return dates.reduce((ranges, isoDate) => {
+    const [yearText, monthText] = isoDate.split("-");
+    const key = `${yearText}-${monthText}`;
+    if (seen.has(key)) {
+      return ranges;
+    }
+
+    seen.add(key);
+    const year = Number(yearText);
+    const month = Number(monthText);
+    ranges.push({
+      start: `${yearText}-${monthText}-01`,
+      end: `${yearText}-${monthText}-${String(getLastDayOfMonth(year, month)).padStart(2, "0")}`,
+    });
+    return ranges;
+  }, []);
+}
+
+function parseStooqHistoricalRows(rawText) {
+  const section = extractHistoricalTableSection(rawText);
+  const tokens = section.split(/\s+/).filter(Boolean);
+  const rows = [];
+
+  for (let index = 0; index < tokens.length; index += 1) {
+    if (!isStooqRowStart(tokens, index)) {
+      continue;
+    }
+
+    const day = tokens[index + 1];
+    const month = tokens[index + 2];
+    const year = tokens[index + 3];
+    const lowToken = tokens[index + 6];
+    const closeToken = tokens[index + 7] ?? "";
+    const firstTrailingToken = tokens[index + 8] ?? "";
+    const secondTrailingToken = tokens[index + 9] ?? "";
+    const date = `${year}-${monthNameToNumber(month)}-${day.padStart(2, "0")}`;
+    const close = extractLeadingNumber(closeToken);
+    const volumeToken = resolveVolumeToken(closeToken, firstTrailingToken, secondTrailingToken);
+
+    if (lowToken && close && volumeToken) {
+      rows.push({ date, close });
+    }
+  }
+
+  if (!rows.length) {
+    throw new Error("Historical price rows not found");
+  }
+
+  return rows;
+}
+
+function extractHistoricalTableSection(rawText) {
+  const marker = "No.Date Open High Low Close Change Volume";
+  const markerIndex = rawText.indexOf(marker);
+
+  if (markerIndex === -1) {
+    throw new Error("Historical table marker not found");
+  }
+
+  const trimmed = rawText.slice(markerIndex + marker.length);
+  const endMarkers = ["**▼[Download data in csv file...", "Downloaded data separator:", "Easier access to the data"];
+  const endIndex = endMarkers
+    .map((value) => trimmed.indexOf(value))
+    .filter((value) => value >= 0)
+    .sort((left, right) => left - right)[0];
+
+  return (endIndex >= 0 ? trimmed.slice(0, endIndex) : trimmed).trim();
+}
+
+function isStooqRowStart(tokens, index) {
+  return (
+    /^\d+$/.test(tokens[index] ?? "") &&
+    /^\d{1,2}$/.test(tokens[index + 1] ?? "") &&
+    /^[A-Z][a-z]{2}$/.test(tokens[index + 2] ?? "") &&
+    /^\d{4}$/.test(tokens[index + 3] ?? "") &&
+    isNumericToken(tokens[index + 4] ?? "") &&
+    isNumericToken(tokens[index + 5] ?? "") &&
+    isNumericToken(tokens[index + 6] ?? "")
+  );
+}
+
+function resolveVolumeToken(closeToken, firstTrailingToken, secondTrailingToken) {
+  if (closeToken.includes("%")) {
+    return isVolumeToken(firstTrailingToken) ? firstTrailingToken : "";
+  }
+
+  if (firstTrailingToken.includes("%")) {
+    return isVolumeToken(secondTrailingToken) ? secondTrailingToken : "";
+  }
+
+  return isVolumeToken(firstTrailingToken) ? firstTrailingToken : "";
+}
+
+function extractLeadingNumber(value) {
+  const match = value.match(/^[\d.,]+/);
+  return match ? match[0].replace(/,/g, "") : "";
+}
+
+function isNumericToken(value) {
+  return /^[\d.,]+$/.test(value);
+}
+
+function isVolumeToken(value) {
+  return /^\d[\d,]*$/.test(value);
+}
+
+function monthNameToNumber(value) {
+  const monthMap = {
+    Jan: "01",
+    Feb: "02",
+    Mar: "03",
+    Apr: "04",
+    May: "05",
+    Jun: "06",
+    Jul: "07",
+    Aug: "08",
+    Sep: "09",
+    Oct: "10",
+    Nov: "11",
+    Dec: "12",
+  };
+
+  const month = monthMap[value];
+  if (!month) {
+    throw new Error(`Unexpected month: ${value}`);
+  }
+
+  return month;
+}
+
+function toCompactDate(isoDate) {
+  return isoDate.replaceAll("-", "");
+}
+
+function getLastDayOfMonth(year, month) {
+  return new Date(year, month, 0).getDate();
+}
+
+async function mapWithConcurrency(items, concurrency, mapper) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+
+  async function worker() {
+    while (nextIndex < items.length) {
+      const currentIndex = nextIndex;
+      nextIndex += 1;
+      results[currentIndex] = await mapper(items[currentIndex], currentIndex);
+    }
+  }
+
+  const workerCount = Math.min(concurrency, items.length);
+  await Promise.all(new Array(workerCount).fill(null).map(() => worker()));
+  return results;
 }
