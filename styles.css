@@ -38,6 +38,8 @@ textarea {
 }
 
 .sidebar {
+  display: flex;
+  flex-direction: column;
   padding: 32px 24px;
   border-right: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.45);
@@ -71,6 +73,32 @@ textarea {
   display: grid;
   gap: 10px;
   margin-top: 28px;
+  flex: 1 1 auto;
+}
+
+.sidebar-footer {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.version-label,
+.version-value {
+  margin: 0;
+}
+
+.version-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-strong);
+}
+
+.version-value {
+  margin-top: 6px;
+  font-size: 0.92rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .mobile-nav {

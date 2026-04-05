@@ -1,5 +1,7 @@
 const TALK_STORAGE_KEY = "webtools-talk-messages";
 const CLIPBOARD_STORAGE_KEY = "webtools-clipboard-items";
+const STOCK_CACHE_STORAGE_KEY = "webtools-stock-cache-v1";
+const STOCK_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30;
 
 export const STOCK_DATES = [
   "2010-12-01",
@@ -121,19 +123,40 @@ export async function fetchBestEffortNetworkData() {
 }
 
 export async function fetchStockHistory(code) {
+  const normalizedCode = code.toUpperCase();
+  const cachedHistory = loadStockHistoryCache(normalizedCode);
+
+  if (cachedHistory) {
+    return cachedHistory;
+  }
+
   const history = new Map();
   const monthRanges = buildStockMonthRanges(STOCK_DATES);
-  const responses = await mapWithConcurrency(monthRanges, 4, ({ start, end }) =>
-    fetchStockMonthHistory(code, start, end),
-  );
+  const staleHistory = loadStockHistoryCache(normalizedCode, { allowExpired: true });
 
-  responses.forEach((rawText) => {
-    parseStooqHistoricalRows(rawText).forEach((record) => {
-      if (record.date && record.close && record.close !== "0") {
-        history.set(record.date, record.close);
+  try {
+    const responses = await mapWithConcurrency(monthRanges, 1, async ({ start, end }, index) => {
+      if (index > 0) {
+        await wait(150);
       }
+      return fetchStockMonthHistory(normalizedCode, start, end);
     });
-  });
+
+    responses.forEach((rawText) => {
+      parseStooqHistoricalRows(rawText).forEach((record) => {
+        if (record.date && record.close && record.close !== "0") {
+          history.set(record.date, record.close);
+        }
+      });
+    });
+  } catch (error) {
+    if (staleHistory) {
+      return staleHistory;
+    }
+    throw error;
+  }
+
+  saveStockHistoryCache(normalizedCode, history);
 
   return history;
 }
@@ -312,23 +335,42 @@ async function fetchStockMonthHistory(code, startDate, endDate) {
   const symbol = `${code.toLowerCase()}.jp`;
   const sourceUrl =
     `https://r.jina.ai/http://stooq.com/q/d/?s=${symbol}&i=d&f=${toCompactDate(startDate)}&t=${toCompactDate(endDate)}`;
-  const response = await fetch(sourceUrl, {
-    method: "GET",
-    headers: {
-      Accept: "text/plain",
-    },
-  });
+  let lastError = null;
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch: ${response.status}`);
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 12000);
+
+    try {
+      const response = await fetch(sourceUrl, {
+        method: "GET",
+        headers: {
+          Accept: "text/plain",
+        },
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch: ${response.status}`);
+      }
+
+      const rawText = await response.text();
+      if (rawText.includes("Write to www@stooq.com")) {
+        throw new Error("Stooq historical page is not available");
+      }
+
+      return rawText;
+    } catch (error) {
+      lastError = error;
+      if (attempt < 2) {
+        await wait(500 * (attempt + 1));
+      }
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
   }
 
-  const rawText = await response.text();
-  if (rawText.includes("Write to www@stooq.com")) {
-    throw new Error("Stooq historical page is not available");
-  }
-
-  return rawText;
+  throw lastError || new Error("Failed to fetch stock history");
 }
 
 function buildStockMonthRanges(dates) {
@@ -487,4 +529,45 @@ async function mapWithConcurrency(items, concurrency, mapper) {
   const workerCount = Math.min(concurrency, items.length);
   await Promise.all(new Array(workerCount).fill(null).map(() => worker()));
   return results;
+}
+
+function loadStockHistoryCache(code, options = {}) {
+  try {
+    const raw = localStorage.getItem(STOCK_CACHE_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    const entry = parsed[code];
+
+    if (!entry || !entry.savedAt || !entry.records) {
+      return null;
+    }
+
+    const isExpired = Date.now() - entry.savedAt > STOCK_CACHE_TTL_MS;
+    if (isExpired && !options.allowExpired) {
+      return null;
+    }
+
+    return new Map(Object.entries(entry.records));
+  } catch (error) {
+    return null;
+  }
+}
+
+function saveStockHistoryCache(code, history) {
+  try {
+    const raw = localStorage.getItem(STOCK_CACHE_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    parsed[code] = {
+      savedAt: Date.now(),
+      records: Object.fromEntries(history),
+    };
+    localStorage.setItem(STOCK_CACHE_STORAGE_KEY, JSON.stringify(parsed));
+  } catch (error) {
+    // Ignore cache persistence failures and continue with in-memory results.
+  }
+}
+
+function wait(ms) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
 }
