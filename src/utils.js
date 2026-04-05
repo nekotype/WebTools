@@ -395,6 +395,10 @@ function buildStockMonthRanges(dates) {
 }
 
 function parseStooqHistoricalRows(rawText) {
+  if (containsNoStockData(rawText)) {
+    return [];
+  }
+
   const section = extractHistoricalTableSection(rawText);
   const tokens = section.split(/\s+/).filter(Boolean);
   const rows = [];
@@ -420,7 +424,7 @@ function parseStooqHistoricalRows(rawText) {
     }
   }
 
-  if (!rows.length) {
+  if (!rows.length && section) {
     throw new Error("Historical price rows not found");
   }
 
@@ -428,6 +432,10 @@ function parseStooqHistoricalRows(rawText) {
 }
 
 function extractHistoricalTableSection(rawText) {
+  if (containsNoStockData(rawText)) {
+    return "";
+  }
+
   const marker = "No.Date Open High Low Close Change Volume";
   const markerIndex = rawText.indexOf(marker);
 
@@ -480,6 +488,10 @@ function isNumericToken(value) {
 
 function isVolumeToken(value) {
   return /^\d[\d,]*$/.test(value);
+}
+
+function containsNoStockData(rawText) {
+  return /No data for [A-Z0-9.]+/i.test(rawText);
 }
 
 function monthNameToNumber(value) {
