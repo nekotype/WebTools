@@ -10,10 +10,11 @@ from __future__ import annotations
 
 import argparse
 import csv
+from concurrent.futures import ThreadPoolExecutor
 import re
 import sys
-import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -47,6 +48,7 @@ DATE_ROW_RE = re.compile(
     r"(?P<close>[\d.,]+)"
 )
 CODE_RE = re.compile(r"^(?:\d{4}|\d{3}[A-Z]|\d{4}[A-Z])$")
+YAHOO_ROW_RE = re.compile(r"^\|\s(?P<date>\d{4}/\d{1,2}/\d{1,2})\s\|")
 
 
 def parse_args() -> argparse.Namespace:
@@ -67,46 +69,106 @@ def normalize_code(value: str) -> str:
 
 
 def build_csv_rows(code: str) -> list[tuple[str, str]]:
-    rows: list[tuple[str, str]] = []
+    history: dict[str, str] = {}
 
+    if stooq_supports_code(code):
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            for iso_date, close in zip(
+                STOCK_DATES,
+                executor.map(lambda target_date: fetch_stock_close_from_stooq(code, target_date), STOCK_DATES),
+            ):
+                if close:
+                    history[iso_date] = close
+
+    missing_dates = [iso_date for iso_date in STOCK_DATES if iso_date not in history]
+    if missing_dates:
+        yahoo_history = fetch_yahoo_history(code)
+        for iso_date in missing_dates:
+            close = yahoo_history.get(iso_date)
+            if close:
+                history[iso_date] = close
+
+    rows: list[tuple[str, str]] = []
     for iso_date in STOCK_DATES:
-        close = fetch_stock_close(code, iso_date)
-        rows.append((format_japanese_date(iso_date), close or "データなし"))
+        rows.append((format_japanese_date(iso_date), history.get(iso_date, "データなし")))
 
     return rows
 
 
-def fetch_stock_close(code: str, target_date: str) -> str:
-    history = fetch_stock_history(code, target_date)
+def fetch_stock_close_from_stooq(code: str, target_date: str) -> str:
+    try:
+        history = fetch_stooq_history_once(code, target_date)
+    except Exception:
+        return ""
     return history.get(target_date, "")
 
 
-def fetch_stock_history(code: str, target_date: str) -> dict[str, str]:
+def stooq_supports_code(code: str) -> bool:
+    try:
+        history = fetch_stooq_history_once(code, STOCK_DATES[-1])
+    except Exception:
+        return False
+    return bool(history)
+
+
+def fetch_stooq_history_once(code: str, target_date: str) -> dict[str, str]:
     symbol = f"{code.lower()}.jp"
     compact_date = target_date.replace("-", "")
     url = f"https://r.jina.ai/http://stooq.com/q/d/?s={symbol}&i=d&f={compact_date}&t={compact_date}"
-    last_error: Exception | None = None
+    request = urllib.request.Request(
+        url,
+        headers={
+            "Accept": "text/plain",
+            "User-Agent": "Mozilla/5.0",
+        },
+    )
 
-    for attempt in range(3):
-        try:
-            request = urllib.request.Request(
-                url,
-                headers={
-                    "Accept": "text/plain",
-                    "User-Agent": "Mozilla/5.0",
-                },
-            )
-            with urllib.request.urlopen(request, timeout=20) as response:
-                raw_text = response.read().decode("utf-8", "replace")
-            if "No data for " in raw_text:
-                raise RuntimeError(f"No stock data available for {code}")
-            return parse_stooq_history(raw_text)
-        except (urllib.error.URLError, RuntimeError, TimeoutError) as error:
-            last_error = error
-            if attempt < 2:
-                time.sleep(0.3 * (attempt + 1))
+    with urllib.request.urlopen(request, timeout=20) as response:
+        raw_text = response.read().decode("utf-8", "replace")
+    if "No data for " in raw_text:
+        return {}
+    return parse_stooq_history(raw_text)
 
-    raise RuntimeError(f"Failed to fetch stock history for {code}") from last_error
+
+def fetch_yahoo_history(code: str) -> dict[str, str]:
+    history: dict[str, str] = {}
+    previous_oldest_date: str | None = None
+
+    for page in range(1, 9):
+        raw_text = fetch_yahoo_history_page(code, page)
+        page_history = parse_yahoo_history(raw_text)
+        if not page_history:
+            break
+
+        history.update(page_history)
+        oldest_date = min(page_history)
+        if oldest_date == previous_oldest_date:
+            break
+        previous_oldest_date = oldest_date
+        if len(page_history) < 20:
+            break
+
+    return history
+
+
+def fetch_yahoo_history_page(code: str, page: int) -> str:
+    url = (
+        "https://r.jina.ai/http://finance.yahoo.co.jp/quote/"
+        f"{urllib.parse.quote(code.upper() + '.T')}/history?page={page}"
+    )
+    request = urllib.request.Request(
+        url,
+        headers={
+            "Accept": "text/plain",
+            "User-Agent": "Mozilla/5.0",
+        },
+    )
+
+    try:
+        with urllib.request.urlopen(request, timeout=20) as response:
+            return response.read().decode("utf-8", "replace")
+    except Exception:
+        return ""
 
 
 def parse_stooq_history(raw_text: str) -> dict[str, str]:
@@ -121,6 +183,26 @@ def parse_stooq_history(raw_text: str) -> dict[str, str]:
 
     if not history:
         raise RuntimeError("Historical price rows were not found")
+
+    return history
+
+
+def parse_yahoo_history(raw_text: str) -> dict[str, str]:
+    history: dict[str, str] = {}
+
+    for line in raw_text.splitlines():
+        if not YAHOO_ROW_RE.match(line.strip()):
+            continue
+
+        cells = [cell.strip() for cell in line.split("|")[1:-1]]
+        if len(cells) < 5:
+            continue
+
+        year, month, day = cells[0].split("/")
+        date = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
+        close = cells[4].replace(",", "")
+        if close and close != "---":
+            history[date] = close
 
     return history
 
