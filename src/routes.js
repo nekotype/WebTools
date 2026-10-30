@@ -2,17 +2,9 @@ import { renderBase64Tool } from "./tools/base64.js";
 import { renderClipboardTool } from "./tools/clipboard.js";
 import { renderMarkdownTool } from "./tools/markdown.js";
 import { renderNetworkTool } from "./tools/network.js";
-import { renderStockTool } from "./tools/stock.js";
 import { renderTalkTool } from "./tools/talk.js";
 
 export const routes = {
-  stock: {
-    title: "株価取得",
-    description:
-      "証券コードを入力して、指定日の終値を一覧表示します。Excel に貼り付けやすい形式でまとめてコピーできます。",
-    templateId: "stock-template",
-    render: renderStockTool,
-  },
   markdown: {
     title: "Excel→Markdown",
     description:
@@ -30,7 +22,7 @@ export const routes = {
   talk: {
     title: "つぶやき",
     description:
-      "自分だけのひとりメモを、LINE風の吹き出しで残せます。内容はこのブラウザの localStorage に保存されます。",
+      "自分だけのひとりメモを、シンプルな吹き出しで残せます。内容はこのブラウザの localStorage に保存されます。",
     templateId: "talk-template",
     render: renderTalkTool,
   },
@@ -51,7 +43,7 @@ export const routes = {
 };
 
 export function getRoute(hashValue) {
-  const requestedKey = hashValue.replace("#", "") || "stock";
-  const key = routes[requestedKey] ? requestedKey : "stock";
+  const requestedKey = hashValue.replace("#", "") || "markdown";
+  const key = routes[requestedKey] ? requestedKey : "markdown";
   return { key, route: routes[key] };
 }

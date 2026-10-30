@@ -69,10 +69,12 @@ async function run() {
     await page.evaluate(() => localStorage.clear());
 
     assert((await page.title()) === "Web Tools", "page title should be Web Tools");
-    assert((await text(page, "#page-title")) === "株価取得", "stock tool should be the default route");
-    assert(await page.locator("#stock-code").isVisible(), "stock code input should be visible");
+    assert((await text(page, "#page-title")) === "Excel→Markdown", "markdown tool should be the default route");
+    assert(await page.locator("#excel-input").isVisible(), "markdown input should be visible");
+    assert(await page.locator('[data-route="stock"], option[value="stock"], #stock-template').count() === 0, "stock tool should be removed");
+    assert(await text(page, "#app-version") === "Ver 1.3.3", "version should use Ver x.y.z format");
     await page.screenshot({
-      path: path.join(ARTIFACT_DIR, "01-stock-initial.png"),
+      path: path.join(ARTIFACT_DIR, "01-markdown-initial.png"),
       fullPage: true,
     });
 
@@ -145,36 +147,32 @@ async function run() {
       fullPage: true,
     });
 
-    await page.locator('[data-route="stock"]').click();
-    await page.waitForURL((url) => !url.hash || url.hash === "#stock");
-    await page.locator("#stock-code").fill("7203");
-    await page.locator("#fetch-stock").click();
-    await page.waitForFunction(() => {
-      const el = document.querySelector("#stock-status");
-      return Boolean(el && !el.textContent.includes("取得しています"));
-    });
+    await page.goto(`${BASE_URL}/#stock`);
+    assert(await text(page, "#page-title") === "Excel→Markdown", "old stock links should fall back to markdown");
+    assert(await page.locator('[data-route="markdown"]').getAttribute("class").then(value => value.includes("is-active")), "fallback menu should be active");
+    await page.goto(`${BASE_URL}/#unknown`);
+    assert(await text(page, "#page-title") === "Excel→Markdown", "unknown links should fall back to markdown");
 
-    const stockStatus = await text(page, "#stock-status");
-    assert(stockStatus.length > 0, "stock status should be populated");
-    const stockExport = await page.locator("#stock-export").inputValue();
-    assert(stockExport.includes("日付\t終値"), "excel export header should be generated");
-    assert(stockExport.includes("2010年12月01日"), "excel export should include target dates");
-    await page.screenshot({
-      path: path.join(ARTIFACT_DIR, "07-stock-result.png"),
-      fullPage: true,
-    });
-
-    const tableRows = await page.locator("#stock-results tr").count();
-    const copyAllDisabled = await page.locator("#copy-stock-all").isDisabled();
+    await page.setViewportSize({ width: 375, height: 812 });
+    for (const key of ["markdown", "network", "talk", "base64", "clipboard"]) {
+      await page.locator("#tool-select").selectOption(key);
+      await page.waitForURL(new RegExp(`#${key}$`));
+      assert(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `${key} should fit a mobile viewport`);
+    }
+    await page.locator("#tool-select").selectOption("markdown");
+    await page.waitForURL(/#markdown$/);
+    await page.screenshot({ path: path.join(ARTIFACT_DIR, "07-mobile-markdown.png"), fullPage: true });
     const summary = {
       checked: {
-        stockDefaultView: true,
+        markdownDefaultView: true,
+        stockRemoved: true,
+        legacyRouteFallback: true,
+        mobileNavigation: true,
         markdownConversion: true,
         networkInfoHandled: true,
         talkHandled: true,
         base64Handled: true,
         clipboardHandled: true,
-        stockRequestHandled: true,
       },
       deterministicInputs: {
         markdownTable: [
@@ -182,31 +180,26 @@ async function run() {
           ["売上", "100"],
           ["利益", "25"],
         ],
-        stockCode: "7203",
       },
       final: {
-        route: await page.evaluate(() => window.location.hash || "#stock"),
+        route: await page.evaluate(() => window.location.hash || "#markdown"),
         pageTitle: await page.title(),
         networkExport,
         talkMessageCount,
         base64Decoded,
         clipboardCount,
         firstClipboardText,
-        stockStatus,
-        stockRows: tableRows,
-        copyAllDisabled,
-        stockExport,
         markdownOutput,
       },
       artifacts: {
         screenshots: [
-          "01-stock-initial.png",
+          "01-markdown-initial.png",
           "02-markdown-ready.png",
           "03-network-info.png",
           "04-talk-ready.png",
           "05-base64-ready.png",
           "06-clipboard-ready.png",
-          "07-stock-result.png",
+          "07-mobile-markdown.png",
         ],
         video: path.basename(FINAL_VIDEO_PATH),
       },
