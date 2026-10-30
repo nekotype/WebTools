@@ -72,7 +72,7 @@ async function run() {
     assert((await text(page, "#page-title")) === "Excel→MarkDown", "markdown tool should be the default route");
     assert(await page.locator("#excel-input").isVisible(), "markdown input should be visible");
     assert(await page.locator('[data-route="stock"], option[value="stock"], #stock-template').count() === 0, "stock tool should be removed");
-    assert(await text(page, "#app-version") === "Ver 1.3.4", "version should use Ver x.y.z format");
+    assert(await text(page, "#app-version") === "Ver 1.3.5", "version should use Ver x.y.z format");
     await page.screenshot({
       path: path.join(ARTIFACT_DIR, "01-markdown-initial.png"),
       fullPage: true,

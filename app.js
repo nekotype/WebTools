@@ -1,7 +1,8 @@
 import { initMenu, syncMenuState } from "./src/menu.js";
 import { getRoute, routes } from "./src/routes.js";
+import { trackPageView } from "./src/analytics.js";
 
-const APP_VERSION = "1.3.4";
+const APP_VERSION = "1.3.5";
 
 const root = document.querySelector("#tool-root");
 const titleNode = document.querySelector("#page-title");
@@ -35,6 +36,7 @@ function mountRoute() {
   root.innerHTML = "";
   root.append(template.content.cloneNode(true));
   route.render();
+  trackPageView(key, route.title);
 }
 
 export { routes };
