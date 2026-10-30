@@ -6,7 +6,7 @@ import { renderTalkTool } from "./tools/talk.js";
 
 export const routes = {
   markdown: {
-    title: "Excel→Markdown",
+    title: "Excel→MarkDown",
     description:
       "Excel から貼り付けた表を Markdown のテーブルへ変換します。GitHub やメモ用にそのままコピーできます。",
     templateId: "markdown-template",

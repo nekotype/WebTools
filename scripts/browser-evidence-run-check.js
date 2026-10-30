@@ -69,10 +69,10 @@ async function run() {
     await page.evaluate(() => localStorage.clear());
 
     assert((await page.title()) === "Web Tools", "page title should be Web Tools");
-    assert((await text(page, "#page-title")) === "Excel→Markdown", "markdown tool should be the default route");
+    assert((await text(page, "#page-title")) === "Excel→MarkDown", "markdown tool should be the default route");
     assert(await page.locator("#excel-input").isVisible(), "markdown input should be visible");
     assert(await page.locator('[data-route="stock"], option[value="stock"], #stock-template').count() === 0, "stock tool should be removed");
-    assert(await text(page, "#app-version") === "Ver 1.3.3", "version should use Ver x.y.z format");
+    assert(await text(page, "#app-version") === "Ver 1.3.4", "version should use Ver x.y.z format");
     await page.screenshot({
       path: path.join(ARTIFACT_DIR, "01-markdown-initial.png"),
       fullPage: true,
@@ -148,10 +148,10 @@ async function run() {
     });
 
     await page.goto(`${BASE_URL}/#stock`);
-    assert(await text(page, "#page-title") === "Excel→Markdown", "old stock links should fall back to markdown");
+    assert(await text(page, "#page-title") === "Excel→MarkDown", "old stock links should fall back to markdown");
     assert(await page.locator('[data-route="markdown"]').getAttribute("class").then(value => value.includes("is-active")), "fallback menu should be active");
     await page.goto(`${BASE_URL}/#unknown`);
-    assert(await text(page, "#page-title") === "Excel→Markdown", "unknown links should fall back to markdown");
+    assert(await text(page, "#page-title") === "Excel→MarkDown", "unknown links should fall back to markdown");
 
     await page.setViewportSize({ width: 375, height: 812 });
     for (const key of ["markdown", "network", "talk", "base64", "clipboard"]) {

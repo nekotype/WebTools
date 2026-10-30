@@ -1,12 +1,12 @@
 # Browser Test Patterns
 
-- Initial state: Open the site root and confirm the default route is Excel→Markdown with its input visible, the stock tool is absent, and the version reads `Ver 1.3.3`.
-- Markdown conversion: Switch to the Excel→Markdown tool, paste a fixed 2-column sample table, convert it, and confirm Markdown text is generated.
+- Initial state: Open the site root and confirm the default route is Excel→MarkDown with its input visible, the stock tool is absent, and the version reads `Ver 1.3.4`.
+- Markdown conversion: Switch to the Excel→MarkDown tool, paste a fixed 2-column sample table, convert it, and confirm Markdown text is generated.
 - Network info: Switch to the connection info tool, wait for the loading state to finish, and confirm export text is generated.
 - Talk tool: Switch to the talk tool, post a fixed sample message, and confirm the message bubble is rendered and persisted in the UI.
 - Base64 tool: Switch to the Base64 tool, encode a fixed UTF-8 string, then decode it back and confirm the original text is restored.
 - Clipboard tool: Switch to the clipboard tool, save two fixed strings, reorder them by drag and drop, and confirm the order changes.
-- Route fallback: Open `#stock` and an unknown hash and confirm Excel→Markdown is rendered.
+- Route fallback: Open `#stock` and an unknown hash and confirm Excel→MarkDown is rendered.
 - Mobile layout: At 375px wide, switch through every tool using the dropdown and confirm no horizontal page overflow.
 
 ## Captured States
